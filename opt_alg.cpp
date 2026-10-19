@@ -58,10 +58,43 @@ double* expansion(matrix(*ff)(matrix, matrix, matrix), double x0, double d, doub
 {
 	try
 	{
+		//kod
+		if (d <= 0 || alpha <= 1 || Nmax <= 0)
+			throw string("Niepoprawne parametry ekspansji");
+		//koniec
 		double* p = new double[2] { 0, 0 };
-		//Tu wpisz kod funkcji
+		//kod
 		
-		return p;
+		auto f = [&](double x) { solution X(x); X.fit_fun(ff, ud1, ud2); return m2d(X.y); };
+		double x1 = x0 + d;
+		double y0 = f(x0), y1 = f(x1);
+		if (y1 == y0) { p[0] = x0; p[1] = x1; return p; }
+		if (y1 > y0)
+		{
+			d = -d; x1 = x0 + d; y1 = f(x1);
+			if (y1 >= y0)
+			{
+				p[0] = min(x1, x0 - d); p[1] = max(x1, x0 - d);
+				return p;
+			}
+		}
+		double x_prev = x0, x_curr = x1, y_curr = y1;
+		for (int i = 1; solution::f_calls < Nmax; ++i)
+		{
+			double x_next = x0 + pow(alpha, i) * d;
+			double y_next = f(x_next);
+			if (y_next >= y_curr)
+			{
+				p[0] = min(x_prev, x_next);
+				p[1] = max(x_prev, x_next);
+				return p;
+			}
+			x_prev = x_curr; x_curr = x_next; y_curr = y_next;
+		}
+		delete[] p;
+		throw string("Przekroczono Nmax w metodzie ekspansji");
+		
+		//return p;
 	}
 	catch (string ex_info)
 	{
@@ -75,23 +108,48 @@ solution fib(matrix(*ff)(matrix, matrix, matrix), double a, double b, double eps
 	{
 		solution Xopt;
 		//kod
+		if (epsilon <= 0 || a >= b)
+			throw string("Niepoprawny przedzial lub epsilon");
 
-		double F[100];
-		F[0] = 0;
-		F[1] = 1;
+		vector<double> F = { 0, 1 };
 
-		int k = 2;
-		while (k < 99)
+		while (F.back() <= (b - a) / epsilon)
 		{
-			F[k] = F[k - 1] + F[k - 2];
-
-			if (F[k] > (b - a) / epsilon)
-				break;
-
-			k++;
+			int n = (int)F.size();
+			F.push_back(F[n - 1] + F[n - 2]);
 		}
-		double ai;
 
+		int k = (int)F.size() - 1;
+
+		double ai = a, bi = b;
+
+		double c = bi - F[k - 1] / F[k] * (bi - ai);
+		double d = ai + bi - c;
+
+		for (int i = 0; i <= k - 3; i++)
+		{
+			solution C(c), D(d);
+
+			C.fit_fun(ff, ud1, ud2);
+			D.fit_fun(ff, ud1, ud2);
+
+			if (C.y < D.y)
+			{
+				bi = d;
+			}
+			else
+			{
+				ai = c;
+			}
+
+			c = bi - F[k - i - 2] / F[k - i - 1] * (bi - ai);
+			d = ai + bi - c;
+		}
+
+		Xopt.x = c;
+		Xopt.fit_fun(ff, ud1, ud2);
+		Xopt.flag = 1;
+		//koniec 
 		
 		return Xopt;
 	}
@@ -108,6 +166,45 @@ solution lag(matrix(*ff)(matrix, matrix, matrix), double a, double b, double eps
 	{
 		solution Xopt;
 		//Tu wpisz kod funkcji
+		if (a >= b || epsilon <= 0 || gamma <= 0 || Nmax <= 0)
+			throw string("Niepoprawne parametry metody Lagrange'a");
+		double c = (a + b) / 2, d = c, d_prev = c;
+		matrix historia; bool pierwsza = true;
+		for (int i = 0; ; ++i)
+		{
+			if (pierwsza) { historia = b - a; pierwsza = false; }
+			else historia.add_row(b - a);
+			if (solution::f_calls + 4 > Nmax) { Xopt.flag = 0; break; }
+			solution A(a), B(b), C(c);
+			A.fit_fun(ff, ud1, ud2); B.fit_fun(ff, ud1, ud2); C.fit_fun(ff, ud1, ud2);
+			double fa = m2d(A.y), fb = m2d(B.y), fc = m2d(C.y);
+			double l = fa * (b * b - c * c) + fb * (c * c - a * a) + fc * (a * a - b * b);
+			double m = fa * (b - c) + fb * (c - a) + fc * (a - b);
+			if (m <= 0 || !isfinite(m)) { Xopt.flag = -1; break; }
+			d = 0.5 * l / m;
+			if (!isfinite(d) || d <= a || d >= b || d == c) { Xopt.flag = -1; break; }
+			solution D(d); D.fit_fun(ff, ud1, ud2);
+			if (d < c)
+			{
+				if (D.y < C.y) { b = c; c = d; }
+				else a = d;
+			}
+			else
+			{
+				if (D.y < C.y) { a = c; c = d; }
+				else b = d;
+			}
+			if (b - a < epsilon || (i > 0 && abs(d - d_prev) < gamma))
+			{
+				Xopt.flag = 1; break;
+			}
+			d_prev = d;
+		}
+		historia.add_row(b - a);
+		Xopt.x = (Xopt.flag == 1) ? d : c;
+		Xopt.fit_fun(ff, ud1, ud2);
+		Xopt.ud = historia;
+		//koniec
 
 		return Xopt;
 	}
