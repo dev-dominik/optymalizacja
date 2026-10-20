@@ -126,9 +126,20 @@ solution fib(matrix(*ff)(matrix, matrix, matrix), double a, double b, double eps
 		double c = bi - F[k - 1] / F[k] * (bi - ai);
 		double d = ai + bi - c;
 
+		matrix historia;
+		bool pierwsza = true;
+
 		for (int i = 0; i <= k - 3; i++)
 		{
 			solution C(c), D(d);
+
+			if (pierwsza)
+			{
+				historia = bi - ai;
+				pierwsza = false;
+			}
+			else
+				historia.add_row(bi - ai);
 
 			C.fit_fun(ff, ud1, ud2);
 			D.fit_fun(ff, ud1, ud2);
@@ -150,6 +161,9 @@ solution fib(matrix(*ff)(matrix, matrix, matrix), double a, double b, double eps
 		Xopt.fit_fun(ff, ud1, ud2);
 		Xopt.flag = 1;
 		//koniec 
+
+		historia.add_row(bi - ai);
+		Xopt.ud = historia;
 		
 		return Xopt;
 	}

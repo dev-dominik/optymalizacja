@@ -1,3 +1,3 @@
-metoda;DA_cm2;f_celu;f_calls;flag
-fib;1.00904;43.9694;39;1
-lag;50.5;9122.93;4;-1
+metoda;DA_cm2;y;f_calls;flag
+Fibonacci;1.00904;43.9694;39;1
+Lagrange;50.5;9122.93;4;-1

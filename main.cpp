@@ -10,6 +10,10 @@ Data ostatniej modyfikacji: 15.09.2026
 
 #include"opt_alg.h"
 
+#include <random>
+#include <fstream>
+#include <string>
+
 void lab0();
 void lab1();
 void lab2();
@@ -80,74 +84,239 @@ void lab0()
 	}
 }
 
+
 void lab1()
 {
     double epsilon = 1e-2, gamma = 1e-4;
     int Nmax = 10000;
-    double alpha[3] = { 1.5, 2.0, 3.0 };
+    double alpha[3] = { 1.8, 2.7, 4.2 };
+
     mt19937 gen(random_device{}());
     uniform_real_distribution<double> losuj(-100, 100);
+
     ofstream Sout("wyniki_lab1.csv");
-    Sout << "proba;alpha;x0;metoda;a;b;x;y;f_calls;flag\n";
+
+    Sout << "alpha;proba;x0;a;b;f_exp;"
+        << "x_fib;y_fib;f_fib;rodzaj_fib;"
+        << "x_lag;y_lag;f_lag;rodzaj_lag\n";
+
     for (int j = 0; j < 3; ++j)
     {
         for (int i = 0; i < 100; ++i)
         {
             double x0 = losuj(gen);
-            solution::clear_calls();
-            double* przedzial = expansion(ff1T, x0, 1, alpha[j], Nmax);
-            double a = przedzial[0], b = przedzial[1];
-            delete[] przedzial;
-            solution::clear_calls();
-            solution opt = fib(ff1T, a, b, epsilon);
-            Sout << i + 1 << ';' << alpha[j] << ';' << x0 << ";fib;" << a << ';' << b << ';'
-                << m2d(opt.x) << ';' << m2d(opt.y) << ';' << solution::f_calls << ';' << opt.flag << '\n';
-            solution::clear_calls();
-            opt = lag(ff1T, a, b, epsilon, gamma, Nmax);
-            Sout << i + 1 << ';' << alpha[j] << ';' << x0 << ";lag;" << a << ';' << b << ';'
-                << m2d(opt.x) << ';' << m2d(opt.y) << ';' << solution::f_calls << ';' << opt.flag << '\n';
+            double a = 0, b = 0;
+            int f_exp = 0;
+
+            solution opt_fib, opt_lag;
+            int f_fib = 0, f_lag = 0;
+
+            string rodzaj_fib = "Brak zbieznosci";
+            string rodzaj_lag = "Brak zbieznosci";
+
+            // Metoda ekspansji
+            try
+            {
+                solution::clear_calls();
+
+                double* przedzial = expansion(
+                    ff1T, x0, 1, alpha[j], Nmax
+                );
+
+                a = przedzial[0];
+                b = przedzial[1];
+
+                delete[] przedzial;
+
+                f_exp = solution::f_calls;
+            }
+            catch (string ex_info)
+            {
+                Sout << alpha[j] << ';' << i + 1 << ';'
+                    << x0 << ";;;0;;;;Brak zbieznosci"
+                    << ";;;;Brak zbieznosci\n";
+                continue;
+            }
+
+            // Metoda Fibonacciego
+            try
+            {
+                solution::clear_calls();
+
+                opt_fib = fib(ff1T, a, b, epsilon);
+                f_fib = solution::f_calls;
+
+                if (opt_fib.flag == 1)
+                {
+                    if (m2d(opt_fib.y) < -0.1)
+                        rodzaj_fib = "Globalne";
+                    else
+                        rodzaj_fib = "Lokalne";
+                }
+            }
+            catch (string ex_info)
+            {
+                f_fib = solution::f_calls;
+            }
+
+            // Metoda Lagrange'a
+            try
+            {
+                solution::clear_calls();
+
+                opt_lag = lag(
+                    ff1T, a, b, epsilon, gamma, Nmax
+                );
+
+                f_lag = solution::f_calls;
+
+                if (opt_lag.flag == 1)
+                {
+                    if (m2d(opt_lag.y) < -0.1)
+                        rodzaj_lag = "Globalne";
+                    else
+                        rodzaj_lag = "Lokalne";
+                }
+            }
+            catch (string ex_info)
+            {
+                f_lag = solution::f_calls;
+            }
+
+            // Zapis wynikow do Tabeli 1
+            Sout << alpha[j] << ';'
+                << i + 1 << ';'
+                << x0 << ';'
+                << a << ';'
+                << b << ';'
+                << f_exp << ';';
+
+            if (rodzaj_fib != "Brak zbieznosci")
+                Sout << m2d(opt_fib.x) << ';'
+                << m2d(opt_fib.y);
+            else
+                Sout << ';';
+
+            Sout << ';' << f_fib << ';'
+                << rodzaj_fib << ';';
+
+            if (rodzaj_lag != "Brak zbieznosci")
+                Sout << m2d(opt_lag.x) << ';'
+                << m2d(opt_lag.y);
+            else
+                Sout << ';';
+
+            Sout << ';' << f_lag << ';'
+                << rodzaj_lag << '\n';
         }
     }
-    solution::clear_calls();
-    solution opt = fib(ff1T, -100, 100, epsilon);
-    Sout << "0;0;0;fib_bez_ekspansji;-100;100;" << m2d(opt.x) << ';' << m2d(opt.y)
-        << ';' << solution::f_calls << ';' << opt.flag << '\n';
-    ofstream Historia("przedzial_fib_lab1.csv");
-    for (int i = 0; i < get_len(opt.ud); ++i) Historia << i << ';' << opt.ud(i) << '\n';
-    Historia.close();
-    solution::clear_calls();
-    opt = lag(ff1T, -100, 100, epsilon, gamma, Nmax);
-    Sout << "0;0;0;lag_bez_ekspansji;-100;100;" << m2d(opt.x) << ';' << m2d(opt.y)
-        << ';' << solution::f_calls << ';' << opt.flag << '\n';
-    Historia.open("przedzial_lag_lab1.csv");
-    for (int i = 0; i < get_len(opt.ud); ++i) Historia << i << ';' << opt.ud(i) << '\n';
-    Historia.close();
+
     Sout.close();
 
+    // Optymalizacja bez ekspansji
+    ofstream Bez("bez_ekspansji_lab1.csv");
+    Bez << "metoda;x;y;f_calls;flag\n";
+
+    solution::clear_calls();
+    solution opt = fib(ff1T, -100, 100, epsilon);
+
+    Bez << "Fibonacci;"
+        << m2d(opt.x) << ';'
+        << m2d(opt.y) << ';'
+        << solution::f_calls << ';'
+        << opt.flag << '\n';
+
+    ofstream Historia("przedzial_fib_lab1.csv");
+    Historia << "iteracja;dlugosc\n";
+
+    for (int i = 0; i < get_len(opt.ud); ++i)
+        Historia << i + 1 << ';' << opt.ud(i) << '\n';
+
+    Historia.close();
+
+    solution::clear_calls();
+    opt = lag(ff1T, -100, 100, epsilon, gamma, Nmax);
+
+    Bez << "Lagrange;"
+        << m2d(opt.x) << ';'
+        << m2d(opt.y) << ';'
+        << solution::f_calls << ';'
+        << opt.flag << '\n';
+
+    Historia.open("przedzial_lag_lab1.csv");
+    Historia << "iteracja;dlugosc\n";
+
+    for (int i = 0; i < get_len(opt.ud); ++i)
+        Historia << i + 1 << ';' << opt.ud(i) << '\n';
+
+    Historia.close();
+    Bez.close();
+
+    // Problem rzeczywisty - zbiorniki
     ofstream Real("wyniki_zbiorniki_lab1.csv");
-    Real << "metoda;DA_cm2;f_celu;f_calls;flag\n";
+    Real << "metoda;DA_cm2;y;f_calls;flag\n";
+
     solution::clear_calls();
     solution opt_fib = fib(ff1R, 1, 100, epsilon);
-    Real << "fib;" << m2d(opt_fib.x) << ';' << m2d(opt_fib.y) << ';' << solution::f_calls << ';' << opt_fib.flag << '\n';
+    int f_fib = solution::f_calls;
+
+    Real << "Fibonacci;"
+        << m2d(opt_fib.x) << ';'
+        << m2d(opt_fib.y) << ';'
+        << f_fib << ';'
+        << opt_fib.flag << '\n';
+
     solution::clear_calls();
-    solution opt_lag = lag(ff1R, 1, 100, epsilon, gamma, Nmax);
-    Real << "lag;" << m2d(opt_lag.x) << ';' << m2d(opt_lag.y) << ';' << solution::f_calls << ';' << opt_lag.flag << '\n';
+    solution opt_lag = lag(
+        ff1R, 1, 100, epsilon, gamma, Nmax
+    );
+    int f_lag = solution::f_calls;
+
+    Real << "Lagrange;"
+        << m2d(opt_lag.x) << ';'
+        << m2d(opt_lag.y) << ';'
+        << f_lag << ';'
+        << opt_lag.flag << '\n';
+
     Real.close();
+
+    // Symulacja dla obu metod
     matrix Y0(3, new double[3] { 5, 1, 20 });
-    matrix* Y = solve_ode(df1, 0, 1, 2000, Y0, NAN, opt_fib.x);
+
+    matrix* Yfib = solve_ode(
+        df1, 0, 1, 2000, Y0, NAN, opt_fib.x
+    );
+
+    matrix* Ylag = solve_ode(
+        df1, 0, 1, 2000, Y0, NAN, opt_lag.x
+    );
+
     ofstream Sym("symulacja_lab1.csv");
-    Sym << "czas_s;VA_m3;VB_m3;TB_C\n";
-    for (int i = 0; i < get_len(Y[0]); ++i)
-        Sym << Y[0](i) << ';' << Y[1](i, 0) << ';' << Y[1](i, 1) << ';' << Y[1](i, 2) << '\n';
+
+    Sym << "t;VA_fib;VA_lag;VB_fib;VB_lag;TB_fib;TB_lag\n";
+
+    int n = get_len(Yfib[0]);
+
+    for (int i = 0; i < n; ++i)
+    {
+        Sym << Yfib[0](i) << ';'
+            << Yfib[1](i, 0) << ';'
+            << Ylag[1](i, 0) << ';'
+            << Yfib[1](i, 1) << ';'
+            << Ylag[1](i, 1) << ';'
+            << Yfib[1](i, 2) << ';'
+            << Ylag[1](i, 2) << '\n';
+    }
+
     Sym.close();
-    delete[] Y;
-    cout << "Lab1 zakonczone. Wyniki zapisano do plikow CSV." << endl;
-    cout << "Zbiorniki fib: " << opt_fib << endl;
-    cout << "Zbiorniki lag: " << opt_lag << endl;
 
+    delete[] Yfib;
+    delete[] Ylag;
 
-
+    cout << "Laboratorium 1 zakonczone." << endl;
+    cout << "Wyniki zapisano do plikow CSV." << endl;
 }
+
 
 void lab2()
 {
