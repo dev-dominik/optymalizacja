@@ -16,6 +16,7 @@ Data ostatniej modyfikacji: 15.09.2026
 
 void lab0();
 void lab1();
+void lab1_test();
 void lab2();
 void lab3();
 void lab4();
@@ -26,7 +27,8 @@ int main()
 {
 	try
 	{
-		lab1();
+		// lab1();  // Pelne laboratorium
+		lab1_test(); // Test kontrolny zbiornikow
 	}
 	catch (string EX_INFO)
 	{
@@ -84,6 +86,36 @@ void lab0()
 	}
 }
 
+
+void lab1_test()
+{
+    const double DA_cm2 = 50.0;
+    const double temperatura_oczekiwana = 61.2859;
+
+    matrix Y0(3, new double[3]{5.0, 1.0, 20.0});
+    matrix* Y = solve_ode(df1, 0.0, 1.0, 2000.0, Y0, NAN, matrix(DA_cm2));
+
+    int n = get_len(Y[0]);
+    double Tmax = Y[1](0, 2);
+    double tmax = Y[0](0);
+
+    for (int i = 1; i < n; ++i)
+    {
+        if (Y[1](i, 2) > Tmax)
+        {
+            Tmax = Y[1](i, 2);
+            tmax = Y[0](i);
+        }
+    }
+
+    cout << "Test kontrolny: DA = " << DA_cm2 << " cm2\n";
+    cout << "Maksymalna temperatura B: " << Tmax << " C\n";
+    cout << "Czas wystapienia maksimum: " << tmax << " s\n";
+    cout << "Wartosc oczekiwana: " << temperatura_oczekiwana << " C\n";
+    cout << "Roznica: " << abs(Tmax - temperatura_oczekiwana) << " C\n";
+
+    delete[] Y;
+}
 
 void lab1()
 {
