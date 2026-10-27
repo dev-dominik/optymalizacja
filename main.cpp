@@ -353,6 +353,106 @@ void lab1()
 void lab2()
 {
 
+    //deklaracja parametrow optymalizacji
+    //s - poczatkowa dlugosc kroku
+    //alphaHJ - wspolczynnik zmniejszania kroku w metodzie hooke'a jeevesa
+    //alphaR - wspolczynnik zwiekszania kroku w metodzie rosenbrocka
+    //beta - wspolczynnik zmniejszania i odwracania krokuw metodzie rosenbrocka
+    //epsilon - dokladnosc zakonczenia optymalizacji
+    double s, alphaHJ, alphaR, beta, epsilon;
+    int Nmax;//maksymalna liczba wywolan funkcji celu 
+
+    //obiekt przechowywujacy wynik optymalizacji
+    //opt.x - znaleziony punkt, opt.y - wartosc funkcji celu
+    solution opt;
+    //x0 - wektor punktu poczatkowego
+    //s0 - wektor poczatkowych krokow dla metdoy rosenbrocka
+    matrix x0, s0;
+
+    if (0)//funkcja testowa
+    {
+
+        s = 0.5;//poczatkowa dlugosc kroku
+        alphaHJ = 0.5;//hooke-jeeves: po nieudanym poszukiwaniu krok zmniejsza sie
+        alphaR = 2;//rosenbrock: po udanym ruchu krok zwieksza sie dwukrotnie
+        beta = 0.5;//rosenbrock: po nieudanym ruchu krok zmniejsza sie o polowe i zmienia znak czyli kierunek
+        epsilon = 1e-3;//dokladnosc optymalizacji 0.001
+        Nmax = 1000;//limit wywolan funkcji celu
+        s0 = matrix(2, 1, s);//utworzenie wektora 2x1 zawierajacego poczatkowe kroki s0=[0.5;0.5]
+
+        //losowanie punktu poczatkowego x0=[x1,x2]
+        //rand_mat(2,1) generuje dwie liczby z przedzialu [0,1]
+        //po pomnozeniu przez 2 i odjeciu 1 otzrymujemy x1,x2 z [-1,1]
+        x0 = 2 * rand_mat(2, 1) - 1;
+        cout << x0 << endl << endl;
+
+        //metoda  hooke'a jeevsa
+        //ff2T - testowa funkcje celu dwoch zmiennych
+        //x0 - punkt startowy, s - dlugosc kroku
+        //alphaHJ - wspolczynnik redukcji kroku
+        // epsilon - dokladnosc , Nmax - limit wywolan
+        //wynik zostaje zapisany w obiekcie opt
+        opt = HJ(ff2T, x0, s, alphaHJ, epsilon, Nmax);
+        cout << opt << endl << endl;
+        //wyzerowanie licznikow wywolan funkcji celu przed rozpoczeciem metody rosenbrocka
+        solution::clear_calls();
+        //metoda rosenbrocka dla tej samej funkcji celu i punktu x0
+        //s0 - wektor krokow, alphaR - ekspansja, beta - kontrakcja 
+        //wynik rosenbrocka zastepuje poprzednhi wynik w opt
+        opt = Rosen(ff2T, x0, s0, alphaR,beta, epsilon, Nmax);
+        cout << opt << endl << endl;
+        //wyserowanie
+        solution::clear_calls();
+
+
+    }
+    if (0)//ramie robota
+    {
+        s = 0.5;//poczatkowa dlugosc kroku dla optymalizacji regulatora
+        alphaHJ = 0.5;//zmniejszenie kroku o polowe
+        alphaR = 2;//podwajanie kroku po udanym ruchu
+        beta = 0.5;//zmniejszanie i odwracanie kroku po nieudanym ruchu
+        epsilon = 1e-3;//dokladnosc
+        Nmax = 1000;//limit wywolan
+        x0 = 20 * rand_mat(2, 1);//losowanie poczatkowych wspolczynnikowregulatora x0(0)=k1, x0(1)=k2 oba naleza do przedzialo [0,20]
+
+        cout << x0 << endl << endl;
+        //optymalizacja refukatora metoda hookea jeevesa
+        //ff2r funkcja celu dla modelu ramienia robota
+        //szukamy wspolczynnikow k1, k2 minimalizujacych
+        //funkcje jakosci sterowania Q(k1,k2)
+        opt = HJ(ff2T, x0, s, alphaHJ, epsilon, Nmax);
+        cout << opt << endl << endl;
+        solution::clear_calls();
+        //utworzenie wektora poczatkowych krkow dla rosenbrocka
+        //s0=[2,2]
+        s0 = matrix(2, 1, s);
+        //optymalizacja tego samego regulatora metoda Rosenbrocka
+        //obie metody rozpoczynaja obliczenia od tego samego punktu x0
+        //rosenbrock moze niezaleznie zzmieniac kroki w obu kierunkach
+        opt = Rosen(ff2T, x0, s0, alphaR,beta, epsilon, Nmax);
+        cout << opt << endl << endl;
+        solution::clear_calls();
+
+        
+    }
+    if (1)//test modelu i funkcji celu
+    {
+
+        //ustawienie wspolczynnikow regulatora
+        //k1=5, k2=5
+        //matrix(2,1,5) tworzy wektor [5;5]
+        //nie wykonujemy tutaj optymalizacji, tylko test funkcji celu
+        opt.x = matrix(2, 1, 5);
+        cout << endl << endl;
+        //obliczenie i wyswietlenie wartosci funkcji celu Q(5,5)
+        //fit_fun(ff2R) wywoluje funkcje celu dla punktu opt.x
+        //ff2R przeprowadza symulacje ruchu ramienia robota
+        //i oblicza funkcje jakosci sterowania
+        //oczekiwany wynik wedlug konspektu okolo 775.229
+        cout << opt.fit_fun(ff2R) << endl << endl;
+        solution::clear_calls();
+    }
 }
 
 void lab3()
